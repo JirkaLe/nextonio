@@ -128,6 +128,11 @@
       <button data-q="maj" class="sel">major</button>
       <button data-q="min">minor</button>
     </span>
+    <span class="lbl" style="margin-left:10px">voicing</span>
+    <span class="qual" id="oct">
+      <button data-oct="1" class="sel">1 oct</button>
+      <button data-oct="2">2 oct</button>
+    </span>
   </div>
 
   <div class="sgrid" id="sgrid">
@@ -162,6 +167,41 @@ function kb(pcs,color){
   return s+`</svg>`;
 }
 
+// ---- two-octave keyboard, lights specific semitone positions (0..23, C..B / C..B)
+function kb2(semis,color){
+  const W=9,H=54,BW=6,BH=34, set=new Set(semis);
+  const whites=[0,2,4,5,7,9,11], blacksAfter=[0,1,3,4,5], blackPc=[1,3,6,8,10];
+  let s=`<svg class="kb" width="${W*14}" height="${H}" viewBox="0 0 ${W*14} ${H}" role="img" aria-label="keys">`;
+  for(let oct=0;oct<2;oct++){
+    whites.forEach((pc,i)=>{
+      const on=set.has(oct*12+pc), x=(oct*7+i)*W;
+      s+=`<rect x="${x}" y="0" width="${W-1}" height="${H}" rx="2" fill="${on?color:'#E8E2D2'}" stroke="rgba(0,0,0,.25)" stroke-width=".5"/>`;
+    });
+  }
+  for(let oct=0;oct<2;oct++){
+    blacksAfter.forEach((wi,k)=>{
+      const on=set.has(oct*12+blackPc[k]), x=(oct*7+wi+1)*W-BW/2;
+      s+=`<rect x="${x}" y="0" width="${BW}" height="${BH}" rx="2" fill="${on?color:'#262019'}" stroke="rgba(0,0,0,.4)" stroke-width=".5"/>`;
+    });
+  }
+  return s+`</svg>`;
+}
+
+// ---- voicing: close (1 oct) keeps notes tight; spread (2 oct) lifts upper tones an octave
+let octMode=1; // 1 = close, 2 = spread across two octaves
+function spreadSemis(root,q){
+  const third=q==='min'?3:4;
+  // root stays low; fifth above; third lifted an octave, kept inside the 2-octave window
+  return [root, root+7, root+third+12].map(n=>n>23?n-12:n);
+}
+function spreadMidis(root,q){
+  const third=q==='min'?3:4;
+  return [60+root, 60+root+7, 60+root+third+12];
+}
+function kbFor(root,q,color){
+  return octMode===2 ? kb2(spreadSemis(root,q),color) : kb(triadPCs(root,q),color);
+}
+
 // ---- synth: play a triad so you can hear it
 let actx;
 function audio(){ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); return actx; }
@@ -169,7 +209,7 @@ function midiToFreq(m){ return 440*Math.pow(2,(m-69)/12); }
 function playTriad(root,q){
   const ac=audio(); if(ac.state==='suspended') ac.resume();
   const third=q==='min'?3:4;
-  const midis=[60+root, 60+((root+third)),(60+root+7)]; // around octave 4
+  const midis= octMode===2 ? spreadMidis(root,q) : [60+root, 60+((root+third)),(60+root+7)]; // around octave 4
   const t=ac.currentTime, master=ac.createGain();
   master.gain.value=0.0001; master.connect(ac.destination);
   const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=2600; lp.connect(master);
@@ -209,10 +249,10 @@ function setChord(root,q,conf,fromMic){
   document.getElementById('nowName').classList.remove('idle');
   document.getElementById('nowNotes').textContent=triadPCs(root,q).map(nm).join('  ');
   document.getElementById('nowConf').textContent=fromMic&&conf!=null?('match '+Math.round(conf*100)+'%'):'';
-  document.getElementById('nowKb').innerHTML=kb(triadPCs(root,q),'#E6A93C');
+  document.getElementById('nowKb').innerHTML=kbFor(root,q,'#E6A93C');
   // sync hand-picker
   [...document.querySelectorAll('.root')].forEach(b=>b.classList.toggle('sel',+b.dataset.pc===root));
-  [...document.querySelectorAll('.qual button')].forEach(b=>b.classList.toggle('sel',b.dataset.q===q));
+  [...document.querySelectorAll('#qual button')].forEach(b=>b.classList.toggle('sel',b.dataset.q===q));
   renderSuggest(root,q);
 }
 function renderSuggest(root,q){
@@ -224,7 +264,7 @@ function renderSuggest(root,q){
       <div class="cn">${chordLabel(s.root,s.q)}</div>
       <div class="cnotes">${notes.map(nm).join('  ')}</div>
       <div class="why">${s.why}</div>
-      <div class="row">${kb(notes,'#67CBA6')}
+      <div class="row">${kbFor(s.root,s.q,'#67CBA6')}
         <button class="hear" aria-label="hear ${chordLabel(s.root,s.q)}">&#9658; hear</button></div>`;
     el.querySelector('.hear').onclick=()=>playTriad(s.root,s.q);
     g.appendChild(el);
@@ -239,9 +279,19 @@ function renderSuggest(root,q){
     b.onclick=()=>setChord(pc,(cur?cur.q:'maj'),null,false);
     r.appendChild(b);
   });
-  document.querySelectorAll('.qual button').forEach(b=>{
+  document.querySelectorAll('#qual button').forEach(b=>{
     b.onclick=()=>{ const q=b.dataset.q; if(cur) setChord(cur.root,q,null,false);
-      else { document.querySelectorAll('.qual button').forEach(x=>x.classList.toggle('sel',x===b)); } };
+      else { document.querySelectorAll('#qual button').forEach(x=>x.classList.toggle('sel',x===b)); } };
+  });
+  document.querySelectorAll('#oct button').forEach(b=>{
+    b.onclick=()=>{
+      octMode=+b.dataset.oct;
+      document.querySelectorAll('#oct button').forEach(x=>x.classList.toggle('sel',x===b));
+      if(cur){
+        document.getElementById('nowKb').innerHTML=kbFor(cur.root,cur.q,'#E6A93C');
+        renderSuggest(cur.root,cur.q);
+      }
+    };
   });
 })();
 document.querySelector('.now .now, #nowName'); // no-op guard
