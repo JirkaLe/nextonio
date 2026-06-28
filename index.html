@@ -1,63 +1,336 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Nextonio</title>
-    <style>
-      :root {
-        color-scheme: dark;
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Next Chord</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#15130E; --panel:#1F1C16; --panel2:#272219;
+    --line:rgba(230,220,195,.10); --line2:rgba(230,220,195,.18);
+    --ink:#F2ECDD; --dim:#A89F8A; --faint:#6E6655;
+    --amber:#E6A93C; --teal:#67CBA6; --warn:#E07B5A;
+    --disp:"Space Grotesk",ui-sans-serif,system-ui,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;
+    line-height:1.5; -webkit-font-smoothing:antialiased;
+    padding:max(18px,env(safe-area-inset-top)) 18px 40px;
+  }
+  .wrap{max-width:760px;margin:0 auto}
+  header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:22px}
+  h1{font-family:var(--disp);font-weight:700;font-size:26px;letter-spacing:-.01em;margin:0}
+  .sub{color:var(--dim);font-size:13px}
+
+  .listen{
+    display:flex;align-items:center;gap:16px;
+    background:var(--panel);border:.5px solid var(--line);border-radius:16px;
+    padding:16px 18px;margin-bottom:18px;
+  }
+  .lamp{
+    flex:none;width:58px;height:58px;border-radius:50%;
+    border:1.5px solid var(--line2);background:var(--panel2);
+    color:var(--dim);cursor:pointer;display:grid;place-items:center;
+    transition:all .2s ease;font-size:22px;
+  }
+  .lamp:hover{border-color:var(--amber);color:var(--amber)}
+  .lamp.on{background:var(--amber);color:#231a07;border-color:var(--amber);
+    box-shadow:0 0 0 6px rgba(230,169,60,.14)}
+  .lamp.on.live{animation:pulse 1.6s ease-in-out infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 6px rgba(230,169,60,.14)}50%{box-shadow:0 0 0 11px rgba(230,169,60,.05)}}
+  @media (prefers-reduced-motion:reduce){.lamp.on.live{animation:none}}
+  .status{flex:1;min-width:0}
+  .status .st{font-family:var(--disp);font-size:15px;font-weight:500}
+  .status .hint{color:var(--dim);font-size:12.5px;margin-top:2px}
+  .meter{height:4px;border-radius:2px;background:var(--panel2);overflow:hidden;margin-top:9px}
+  .meter > i{display:block;height:100%;width:0;background:var(--amber);transition:width .08s linear}
+
+  .now{
+    background:linear-gradient(0deg,var(--panel),var(--panel));
+    border:.5px solid var(--line);border-radius:16px;padding:18px 20px;margin-bottom:8px;
+    display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+  }
+  .now .label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+  .chordname{font-family:var(--disp);font-weight:700;font-size:46px;line-height:1;letter-spacing:-.02em;color:var(--amber)}
+  .chordname.idle{color:var(--faint)}
+  .notes{font-family:var(--mono);font-size:14px;color:var(--dim);margin-top:6px;letter-spacing:.04em}
+  .conf{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:6px}
+  .now .kbwrap{margin-left:auto}
+  .hear{
+    appearance:none;border:.5px solid var(--line2);background:var(--panel2);color:var(--ink);
+    border-radius:9px;padding:7px 12px;font-size:12.5px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;
+  }
+  .hear:hover{border-color:var(--amber);color:var(--amber)}
+  .hear:active{transform:scale(.97)}
+
+  .pick{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:18px 0 6px}
+  .pick .lbl{font-size:12px;color:var(--dim);margin-right:2px}
+  .root{font-family:var(--mono);font-size:12.5px;padding:6px 9px;border-radius:8px;cursor:pointer;
+    background:var(--panel);border:.5px solid var(--line);color:var(--dim)}
+  .root:hover{border-color:var(--line2);color:var(--ink)}
+  .root.sel{background:var(--amber);color:#231a07;border-color:var(--amber)}
+  .qual{display:inline-flex;border:.5px solid var(--line);border-radius:8px;overflow:hidden;margin-left:4px}
+  .qual button{font-family:var(--mono);font-size:12.5px;padding:6px 12px;background:var(--panel);color:var(--dim);border:0;cursor:pointer}
+  .qual button.sel{background:var(--panel2);color:var(--ink)}
+
+  .sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px;margin-top:18px}
+  .card{background:var(--panel);border:.5px solid var(--line);border-radius:14px;padding:15px 16px;display:flex;flex-direction:column;gap:2px}
+  .card .feel{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--teal)}
+  .card .cn{font-family:var(--disp);font-weight:700;font-size:30px;line-height:1.05;letter-spacing:-.01em;margin-top:3px}
+  .card .cnotes{font-family:var(--mono);font-size:12.5px;color:var(--dim);margin-top:3px;letter-spacing:.03em}
+  .card .why{font-size:12.5px;color:var(--dim);margin-top:7px;flex:1}
+  .card .row{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:11px}
+  .card .hear{padding:6px 10px}
+  .empty{color:var(--faint);font-size:13px;padding:8px 2px}
+
+  footer{margin-top:26px;color:var(--faint);font-size:12px;line-height:1.6}
+  footer code{font-family:var(--mono);background:var(--panel2);padding:1px 5px;border-radius:4px;color:var(--dim)}
+  svg.kb{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Next chord</h1>
+    <div class="sub">play a chord, get a good way to keep going</div>
+  </header>
+
+  <div class="listen">
+    <button id="lamp" class="lamp" aria-label="Toggle listening"><span id="lampIcon">●</span></button>
+    <div class="status">
+      <div class="st" id="st">Mic off</div>
+      <div class="hint" id="hint">Tap the dot, allow the mic, then play and hold a chord.</div>
+      <div class="meter"><i id="meter"></i></div>
+    </div>
+  </div>
+
+  <div class="now">
+    <div>
+      <div class="label">Now playing</div>
+      <div class="chordname idle" id="nowName">—</div>
+      <div class="notes" id="nowNotes"></div>
+      <div class="conf" id="nowConf"></div>
+    </div>
+    <div class="kbwrap" id="nowKb"></div>
+  </div>
+
+  <div class="pick">
+    <span class="lbl">or set it by hand</span>
+    <span id="roots"></span>
+    <span class="qual" id="qual">
+      <button data-q="maj" class="sel">major</button>
+      <button data-q="min">minor</button>
+    </span>
+  </div>
+
+  <div class="sgrid" id="sgrid">
+    <div class="empty">Suggestions appear here once a chord is detected or picked.</div>
+  </div>
+
+  <footer>
+    Built around two rules of thumb: chords that share notes blend smoothly, and roots moving by a fifth feel strong. Detection works best on a clean piano triad held for a second; single notes and busy chords can fool it, so the hand-picker is there as a backup.<br><br>
+    Phone or Mac, run it over <code>https</code> or <code>localhost</code> so the mic is allowed. If the dot won't turn on, download this file and from its folder run <code>python3 -m http.server 8000</code>, then open <code>http://localhost:8000/next-chord.html</code>.
+  </footer>
+</div>
+
+<script>
+const NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const nm=pc=>NAMES[((pc%12)+12)%12];
+const triadPCs=(root,q)=>[root%12,(root+(q==='min'?3:4))%12,(root+7)%12];
+const chordLabel=(root,q)=>nm(root)+(q==='min'?'m':'');
+
+// ---- piano keyboard (one octave), lights the given pitch classes
+function kb(pcs,color){
+  const W=18,H=64,BW=11,BH=40, set=new Set(pcs.map(p=>((p%12)+12)%12));
+  const whites=[0,2,4,5,7,9,11], blacksAfter=[0,1,3,4,5], blackPc=[1,3,6,8,10];
+  let s=`<svg class="kb" width="${W*7}" height="${H}" viewBox="0 0 ${W*7} ${H}" role="img" aria-label="keys">`;
+  whites.forEach((pc,i)=>{
+    const on=set.has(pc);
+    s+=`<rect x="${i*W}" y="0" width="${W-1}" height="${H}" rx="3" fill="${on?color:'#E8E2D2'}" stroke="rgba(0,0,0,.25)" stroke-width=".5"/>`;
+  });
+  blacksAfter.forEach((wi,k)=>{
+    const pc=blackPc[k], on=set.has(pc), x=(wi+1)*W-BW/2;
+    s+=`<rect x="${x}" y="0" width="${BW}" height="${BH}" rx="2.5" fill="${on?color:'#262019'}" stroke="rgba(0,0,0,.4)" stroke-width=".5"/>`;
+  });
+  return s+`</svg>`;
+}
+
+// ---- synth: play a triad so you can hear it
+let actx;
+function audio(){ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); return actx; }
+function midiToFreq(m){ return 440*Math.pow(2,(m-69)/12); }
+function playTriad(root,q){
+  const ac=audio(); if(ac.state==='suspended') ac.resume();
+  const third=q==='min'?3:4;
+  const midis=[60+root, 60+((root+third)),(60+root+7)]; // around octave 4
+  const t=ac.currentTime, master=ac.createGain();
+  master.gain.value=0.0001; master.connect(ac.destination);
+  const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=2600; lp.connect(master);
+  master.gain.setValueAtTime(0.0001,t);
+  master.gain.exponentialRampToValueAtTime(0.5,t+0.012);
+  master.gain.exponentialRampToValueAtTime(0.0006,t+1.5);
+  midis.forEach((mi,i)=>{
+    const o=ac.createOscillator(), g=ac.createGain();
+    o.type='triangle'; o.frequency.value=midiToFreq(mi);
+    g.gain.value=i===0?0.9:0.7; o.connect(g); g.connect(lp);
+    o.start(t); o.stop(t+1.6);
+  });
+}
+
+// ---- suggestion engine (functional harmony)
+function suggest(root,q){
+  const maj=[
+    {off:5,q:'maj',feel:'Resolve',why:'Lands home. Down a fifth is the strongest landing.'},
+    {off:7,q:'maj',feel:'Brighten',why:'Up a fifth. Lifts and pushes the music forward.'},
+    {off:9,q:'min',feel:'Wistful',why:'Relative minor. Shares two of three notes, so it slips in softly.'},
+    {off:2,q:'min',feel:'Gentle lift',why:'A step up. Sets up a return back home.'},
+  ];
+  const min=[
+    {off:3,q:'maj',feel:'Open up',why:'Relative major. Shares two notes and brightens the mood.'},
+    {off:5,q:'min',feel:'Deepen',why:'Up a fourth. Darker, keeps the introspective feel.'},
+    {off:8,q:'maj',feel:'Warm lift',why:'A bright major a minor sixth up. Lovely contrast.'},
+    {off:7,q:'maj',feel:'Tension',why:'Its dominant. Pulls strongly back to the home minor.'},
+  ];
+  return (q==='min'?min:maj).map(s=>({...s,root:(root+s.off)%12}));
+}
+
+// ---- state + render
+let cur=null; // {root,q}
+function setChord(root,q,conf,fromMic){
+  cur={root,q};
+  document.getElementById('nowName').textContent=chordLabel(root,q);
+  document.getElementById('nowName').classList.remove('idle');
+  document.getElementById('nowNotes').textContent=triadPCs(root,q).map(nm).join('  ');
+  document.getElementById('nowConf').textContent=fromMic&&conf!=null?('match '+Math.round(conf*100)+'%'):'';
+  document.getElementById('nowKb').innerHTML=kb(triadPCs(root,q),'#E6A93C');
+  // sync hand-picker
+  [...document.querySelectorAll('.root')].forEach(b=>b.classList.toggle('sel',+b.dataset.pc===root));
+  [...document.querySelectorAll('.qual button')].forEach(b=>b.classList.toggle('sel',b.dataset.q===q));
+  renderSuggest(root,q);
+}
+function renderSuggest(root,q){
+  const g=document.getElementById('sgrid'); g.innerHTML='';
+  suggest(root,q).forEach(s=>{
+    const notes=triadPCs(s.root,s.q);
+    const el=document.createElement('div'); el.className='card';
+    el.innerHTML=`<div class="feel">${s.feel}</div>
+      <div class="cn">${chordLabel(s.root,s.q)}</div>
+      <div class="cnotes">${notes.map(nm).join('  ')}</div>
+      <div class="why">${s.why}</div>
+      <div class="row">${kb(notes,'#67CBA6')}
+        <button class="hear" aria-label="hear ${chordLabel(s.root,s.q)}">&#9658; hear</button></div>`;
+    el.querySelector('.hear').onclick=()=>playTriad(s.root,s.q);
+    g.appendChild(el);
+  });
+}
+
+// hand-picker
+(function(){
+  const r=document.getElementById('roots');
+  NAMES.forEach((n,pc)=>{
+    const b=document.createElement('button'); b.className='root'; b.dataset.pc=pc; b.textContent=n;
+    b.onclick=()=>setChord(pc,(cur?cur.q:'maj'),null,false);
+    r.appendChild(b);
+  });
+  document.querySelectorAll('.qual button').forEach(b=>{
+    b.onclick=()=>{ const q=b.dataset.q; if(cur) setChord(cur.root,q,null,false);
+      else { document.querySelectorAll('.qual button').forEach(x=>x.classList.toggle('sel',x===b)); } };
+  });
+})();
+document.querySelector('.now .now, #nowName'); // no-op guard
+document.getElementById('nowName').parentElement.parentElement.querySelector('.kbwrap');
+
+// allow tapping the now-playing area to hear the current chord
+document.querySelector('.now').addEventListener('click',e=>{ if(cur && !e.target.closest('.kbwrap')) {} });
+document.getElementById('nowKb').addEventListener('click',()=>{ if(cur) playTriad(cur.root,cur.q); });
+
+// ---- microphone + detection
+let stream,an,buf,timeBuf,raf,running=false,sr=44100;
+let pending=null,pendCount=0,committed='';
+const lamp=document.getElementById('lamp'), lampIcon=document.getElementById('lampIcon');
+const st=document.getElementById('st'), hint=document.getElementById('hint'), meter=document.getElementById('meter');
+
+function chroma(){
+  an.getFloatFrequencyData(buf);
+  const C=new Array(12).fill(0); let tot=0;
+  for(let i=1;i<buf.length;i++){
+    const f=i*sr/an.fftSize;
+    if(f<55||f>2100) continue;
+    const amp=Math.pow(10,buf[i]/20);
+    if(buf[i]<-95) continue;
+    const midi=69+12*Math.log2(f/440);
+    const pc=((Math.round(midi)%12)+12)%12;
+    C[pc]+=amp; tot+=amp;
+  }
+  return {C,tot};
+}
+function detect(){
+  const {C,tot}=chroma();
+  // level meter (time domain RMS)
+  an.getFloatTimeDomainData(timeBuf);
+  let rms=0; for(let i=0;i<timeBuf.length;i++) rms+=timeBuf[i]*timeBuf[i];
+  rms=Math.sqrt(rms/timeBuf.length);
+  meter.style.width=Math.min(100,rms*420)+'%';
+
+  let cand=null,conf=0;
+  if(tot>0 && rms>0.012){
+    const sum=C.reduce((a,b)=>a+b,0)||1;
+    let best=-1;
+    for(let root=0;root<12;root++){
+      for(const q of ['maj','min']){
+        const t=triadPCs(root,q);
+        const score=(C[t[0]]+C[t[1]]+C[t[2]])/sum;
+        if(score>best){best=score;cand={root,q};conf=score;}
       }
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-      body {
-        min-height: 100vh;
-        display: grid;
-        place-items: center;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          Helvetica, Arial, sans-serif;
-        background: radial-gradient(circle at 50% 0%, #1a1a2e 0%, #0d0d12 60%);
-        color: #f5f5f7;
-        text-align: center;
-        padding: 2rem;
-      }
-      .card {
-        max-width: 32rem;
-      }
-      h1 {
-        font-size: clamp(2.5rem, 8vw, 4.5rem);
-        font-weight: 800;
-        letter-spacing: -0.03em;
-        background: linear-gradient(135deg, #7f9cf5, #c084fc);
-        -webkit-background-clip: text;
-        background-clip: text;
-        color: transparent;
-      }
-      p {
-        margin-top: 1rem;
-        font-size: 1.125rem;
-        line-height: 1.6;
-        color: #a1a1aa;
-      }
-      .badge {
-        display: inline-block;
-        margin-top: 2rem;
-        padding: 0.5rem 1rem;
-        border: 1px solid #27272a;
-        border-radius: 9999px;
-        font-size: 0.875rem;
-        color: #71717a;
-      }
-    </style>
-  </head>
-  <body>
-    <main class="card">
-      <h1>Nextonio</h1>
-      <p>Your new app is live. This is a starting point &mdash; ready to grow into whatever you build next.</p>
-      <span class="badge">Deployed on Vercel</span>
-    </main>
-  </body>
+    }
+    if(conf<0.45) cand=null; // too ambiguous
+  }
+  // stability gate
+  const key=cand?cand.root+cand.q:'';
+  if(key===(pending?pending.root+pending.q:'')) pendCount++;
+  else {pending=cand;pendCount=1;}
+  if(cand && pendCount>=4 && key!==committed){
+    committed=key; setChord(cand.root,cand.q,conf,true);
+  }
+  if(!cand){
+    if(rms<=0.012){ st.textContent='Listening…'; hint.textContent='Play and hold a chord.'; }
+    else { st.textContent='Listening…'; hint.textContent='Hold it steady a moment.'; }
+  } else { st.textContent='Heard it'; hint.textContent='Keep going, or play the next chord.'; }
+  raf=requestAnimationFrame(detect);
+}
+
+async function start(){
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+  }catch(err){
+    st.textContent='Mic blocked'; st.style.color='var(--warn)';
+    hint.textContent='Allow microphone for this page. If you are inside a chat, download the file and open it in Chrome, or serve it over localhost.';
+    return;
+  }
+  st.style.color='';
+  const ac=audio(); sr=ac.sampleRate;
+  const src=ac.createMediaStreamSource(stream);
+  an=ac.createAnalyser(); an.fftSize=32768; an.smoothingTimeConstant=0.6;
+  buf=new Float32Array(an.frequencyBinCount); timeBuf=new Float32Array(an.fftSize);
+  src.connect(an);
+  running=true; lamp.classList.add('on','live'); lampIcon.textContent='■';
+  committed=''; pending=null;
+  detect();
+}
+function stop(){
+  running=false; cancelAnimationFrame(raf);
+  if(stream) stream.getTracks().forEach(t=>t.stop());
+  lamp.classList.remove('on','live'); lampIcon.textContent='●';
+  meter.style.width='0'; st.textContent='Mic off'; hint.textContent='Tap the dot to listen again.';
+}
+lamp.onclick=()=> running?stop():start();
+</script>
+</body>
 </html>
