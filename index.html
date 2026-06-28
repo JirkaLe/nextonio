@@ -191,12 +191,12 @@ function kb2(semis,color){
 let octMode=1; // 1 = close, 2 = spread across two octaves
 function spreadSemis(root,q){
   const third=q==='min'?3:4;
-  // root stays low; fifth above; third lifted an octave, kept inside the 2-octave window
-  return [root, root+7, root+third+12].map(n=>n>23?n-12:n);
+  // root and third stay low; the fifth (top of the triad) lifts an octave, kept inside the window
+  return [root, root+third, root+7+12].map(n=>n>23?n-12:n);
 }
 function spreadMidis(root,q){
   const third=q==='min'?3:4;
-  return [60+root, 60+root+7, 60+root+third+12];
+  return [60+root, 60+root+third, 60+root+7+12];
 }
 function kbFor(root,q,color){
   return octMode===2 ? kb2(spreadSemis(root,q),color) : kb(triadPCs(root,q),color);
