@@ -188,18 +188,20 @@ function kb2(semis,color){
 }
 
 // ---- voicing: close (1 oct) keeps notes tight; spread (2 oct) lifts upper tones an octave
-let octMode=1; // 1 = close, 2 = spread across two octaves
+let octMode=1; // 1 = close (pitch classes); 2 = root position, spilling to a 2nd octave only when needed
 function spreadSemis(root,q){
-  const third=q==='min'?3:4;
-  // root and third stay low; the fifth (top of the triad) lifts an octave, kept inside the window
-  return [root, root+third, root+7+12].map(n=>n>23?n-12:n);
+  // root position: each tone at its pitch class, lifted an octave only if it would fall below the root
+  const rootPc=((root%12)+12)%12;
+  return triadPCs(root,q).map(pc => pc<rootPc ? pc+12 : pc);
 }
 function spreadMidis(root,q){
-  const third=q==='min'?3:4;
-  return [60+root, 60+root+third, 60+root+7+12];
+  return spreadSemis(root,q).map(s=>60+s);
 }
 function kbFor(root,q,color){
-  return octMode===2 ? kb2(spreadSemis(root,q),color) : kb(triadPCs(root,q),color);
+  if(octMode!==2) return kb(triadPCs(root,q),color);
+  const semis=spreadSemis(root,q);
+  // keep a one-octave keyboard when the chord fits ascending within it
+  return Math.max(...semis)<12 ? kb(semis,color) : kb2(semis,color);
 }
 
 // ---- synth: play a triad so you can hear it
