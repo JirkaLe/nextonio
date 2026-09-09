@@ -621,6 +621,33 @@ const SONGS=[
    bars:[['Am','There is a'],['C','house in'],['D','New Or-'],['F','leans'],
          ['Am','they call the'],['C','Ri-sing'],['E','Sun'],['E','']]},
 
+  // ---------- well-known songs ----------
+  // Chord progressions only. These lyrics are still in copyright, unlike the
+  // traditionals above, so the cues mark sections instead of words.
+  {name:'Let It Be', kind:'The Beatles', group:'pop', key:'C major', beats:4,
+   tip:'The four-chord song. It is the pop loop with a different ending \u2014 bars 7 and 8 walk F down to C instead of hanging on F.',
+   bars:[['C','verse'],['G',''],['Am',''],['F',''],['C',''],['G',''],['F','coming home'],['C','']]},
+
+  {name:'Knockin\u2019 on Heaven\u2019s Door', kind:'Bob Dylan', group:'pop', key:'G major', beats:4,
+   tip:'Two bars each, three chords, and the only change is Am in the first half becoming C in the second. About as easy as a famous song gets.',
+   bars:[['G','first half'],['D',''],['Am',''],['Am',''],['G','second half'],['D',''],['C',''],['C','']]},
+
+  {name:'Stand By Me', kind:'Ben E. King', group:'pop', key:'C major', beats:4,
+   tip:'The doo-wop loop with a name on it. Play it slow and let the left hand walk \u2014 that bass line is the whole song.',
+   bars:[['C',''],['C',''],['Am',''],['Am',''],['F',''],['G',''],['C',''],['C','']]},
+
+  {name:'Hallelujah', kind:'Leonard Cohen', group:'pop', key:'C major', beats:4,
+   tip:'The verse literally describes itself: bar 5 is the fourth (F), bar 6 is the fifth (G), and the minor fall and major lift follow.',
+   bars:[['C','verse'],['Am',''],['C',''],['Am',''],['F','the fourth'],['G','the fifth'],['C',''],['G','']]},
+
+  {name:'Country Roads', kind:'John Denver', group:'pop', key:'G major', beats:4,
+   tip:'Bright and easy, and the Em in bar 2 is the only shade in it. Good one to sing along with once your hands know the shapes.',
+   bars:[['G','verse'],['Em',''],['D',''],['C',''],['G',''],['Em',''],['D',''],['G','']]},
+
+  {name:'Zombie', kind:'The Cranberries', group:'pop', key:'E minor', beats:4,
+   tip:'Four bars, round and round, the entire song. Darker than the rest of this list \u2014 it starts on the minor and never fully resolves.',
+   bars:[['Em',''],['C',''],['G',''],['D','']]},
+
   // ---------- progressions to loop ----------
   {name:'Sunshine', kind:'I - IV - V', group:'loop', key:'C major', beats:4,
    tip:'The three happiest chords in music. Folk, country and early rock nearly all live here \u2014 loop it and it just sounds glad.',
@@ -799,7 +826,7 @@ function playSong(){
 // ---- controls
 (function(){
   const pick=document.getElementById('songPick');
-  [['song','Songs'],['loop','Progressions to loop']].forEach(([g,label])=>{
+  [['song','Songs'],['pop','Well-known songs'],['loop','Progressions to loop']].forEach(([g,label])=>{
     const row=document.createElement('div'); row.className='pickgroup';
     row.innerHTML=`<span class="glbl">${label}</span>`;
     SONGS.forEach((s,i)=>{
