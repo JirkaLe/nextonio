@@ -501,10 +501,18 @@ lamp.onclick=()=> running?stop():start();
 
 // ---- chord symbols -> {root,q}
 const PCLET={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+const QUAL={'':'maj','m':'min','7':'dom7','m7':'min7','maj7':'maj7'};
+// intervals above the root; sevenths are four notes, so anything downstream
+// has to work off the length rather than assume three
+const CHORD_INT={maj:[0,4,7],min:[0,3,7],dom7:[0,4,7,10],min7:[0,3,7,10],maj7:[0,4,7,11]};
+const chordPCs=(root,q)=>(CHORD_INT[q]||CHORD_INT.maj).map(i=>(root+i)%12);
+// the mic detector and the suggestion engine only ever deal in plain triads
+const baseQual=q=>(q==='min'||q==='min7')?'min':'maj';
 function parseChord(sym){
-  const m=/^([A-G])([#b]?)(m?)$/.exec(sym);
+  const m=/^([A-G])([#b]?)(maj7|m7|m|7)?$/.exec(sym);
+  if(!m) throw new Error('bad chord symbol: '+sym);
   const root=PCLET[m[1]]+(m[2]==='#'?1:m[2]==='b'?-1:0);
-  return {sym,root:((root%12)+12)%12,q:m[3]==='m'?'min':'maj'};
+  return {sym,root:((root%12)+12)%12,q:QUAL[m[3]||'']};
 }
 const noteName=m=>nm(m)+(Math.floor(m/12)-1); // MIDI 60 -> "C4"
 
@@ -522,19 +530,26 @@ function stackUp(order,bottom){
 // Right hand: try all three inversions and keep the one that moves least from
 // the previous chord. That is what stops the hand jumping around the keyboard.
 function rhVoicing(root,q,prev){
-  const pcs=triadPCs(root,q);
+  const pcs=chordPCs(root,q), N=pcs.length;
   let best=null,bestCost=Infinity;
-  for(let inv=0;inv<3;inv++){
-    const order=[pcs[inv],pcs[(inv+1)%3],pcs[(inv+2)%3]];
+  for(let inv=0;inv<N;inv++){
+    const order=pcs.map((_,k)=>pcs[(inv+k)%N]);
     for(const b of [48+order[0],60+order[0],72+order[0]]){
       if(b<57||b>72) continue;
       const v=stackUp(order,b);
-      if(v[2]>81) continue;
-      const centre=(v[0]+v[2])/2;
-      // no previous chord: start in root position, comfortably around middle C
-      const cost = prev
-        ? v.reduce((s,n,i)=>s+Math.abs(n-prev[i]),0)+Math.abs(centre-66)*0.12
-        : (inv===0?0:9)+Math.abs(centre-64)*0.5;
+      if(v[v.length-1]>84) continue;
+      const centre=(v[0]+v[v.length-1])/2;
+      let cost;
+      if(prev){
+        // chords can differ in size (a triad next to a seventh), so compare the
+        // notes that pair up and charge a flat amount for the leftovers
+        const n=Math.min(v.length,prev.length);
+        cost=Math.abs(v.length-prev.length)*2+Math.abs(centre-66)*0.12;
+        for(let i=0;i<n;i++) cost+=Math.abs(v[i]-prev[i]);
+      } else {
+        // no previous chord: start in root position, comfortably around middle C
+        cost=(inv===0?0:9)+Math.abs(centre-64)*0.5;
+      }
       if(cost<bestCost){bestCost=cost;best=v;}
     }
   }
@@ -547,8 +562,9 @@ function lhVoicing(root){
   if(lhMode==='fifth') return [b,b+7];
   return [b,b+12];
 }
-// Conventional fingerings for a three-note right-hand triad.
+// Conventional right-hand fingerings.
 function rhFingers(v,root){
+  if(v.length>3) return '1 2 3 5';           // a seventh: one finger per note
   const bottomIsThird = v[0]%12 !== root%12 && ((v[0]-root)%12+12)%12<=4;
   return bottomIsThird ? '1 2 5' : '1 3 5';
 }
@@ -648,6 +664,13 @@ const SONGS=[
    tip:'Four bars, round and round, the entire song. Darker than the rest of this list \u2014 it starts on the minor and never fully resolves.',
    bars:[['Em',''],['C',''],['G',''],['D','']]},
 
+  {name:'\u017Divot je jen n\u00E1hoda', kind:'Je\u017Eek \u2013 DRAFT, check by ear', group:'pop', key:'C major', beats:4,
+   tip:'\u26A0 Draft chart, not verified \u2014 press play song and tell me which bars are wrong. It is a 1932 Je\u017Eek swing tune, so it leans on sevenths and the ii\u2013V turnaround (Dm\u2013G7) rather than plain triads. Bar 12\u2019s Fm is the minor-four, very much of the period. Je\u017Eek died in 1942 so the music is public domain; the Voskovec and Werich words are not, hence no lyrics.',
+   bars:[['C','A section'],['A7',''],['Dm',''],['G7',''],
+         ['C',''],['A7',''],['Dm',''],['G7',''],
+         ['C','B section'],['C7',''],['F',''],['Fm','minor four'],
+         ['C',''],['A7',''],['G7',''],['C','']]},
+
   // ---------- progressions to loop ----------
   {name:'Sunshine', kind:'I - IV - V', group:'loop', key:'C major', beats:4,
    tip:'The three happiest chords in music. Folk, country and early rock nearly all live here \u2014 loop it and it just sounds glad.',
@@ -726,7 +749,7 @@ function bindStep(el,s,i){
   el.setAttribute('role','button');
   el.setAttribute('aria-label',`bar ${i+1}, ${s.sym}, hear it`);
   const nxt=el.querySelector('.nxt');
-  if(nxt) nxt.onclick=e=>{e.stopPropagation();setChord(s.root,s.q,null,false);
+  if(nxt) nxt.onclick=e=>{e.stopPropagation();setChord(s.root,baseQual(s.q),null,false);
     document.querySelector('.now').scrollIntoView({behavior:'smooth',block:'center'});};
   const hit=()=>{stopSong();playNotes(s.lh.concat(s.rh),audio().currentTime,1.6,0.45);flash(i);};
   el.onclick=hit;
