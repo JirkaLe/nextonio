@@ -134,6 +134,36 @@
   .hand .f{color:var(--faint)}
   svg.kbwide{display:block;width:100%;height:auto;max-width:392px}
 
+  .pickgroup{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+  .pickgroup .glbl{width:100%;font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
+
+  /* text-only view: read it like a chart, no picture to decode */
+  .chartwrap{margin-top:14px;overflow-x:auto;border:.5px solid var(--line);border-radius:14px;background:var(--panel)}
+  .chart{width:100%;border-collapse:collapse;font-family:var(--mono);white-space:nowrap}
+  .chart th{text-align:left;font-family:ui-sans-serif,system-ui,sans-serif;font-size:10px;font-weight:400;
+    letter-spacing:.13em;text-transform:uppercase;color:var(--faint);padding:11px 14px 8px}
+  .chart td{padding:10px 14px;border-top:.5px solid var(--line);cursor:pointer;vertical-align:middle}
+  .chart tbody tr:hover td{background:rgba(230,220,195,.045)}
+  .chart tbody tr.on td{background:var(--panel2);box-shadow:inset 0 0 0 9999px rgba(230,169,60,.06)}
+  .chart tbody tr.on .c-no{color:var(--amber)}
+  .chart .c-no{color:var(--faint);font-size:12px}
+  .chart .c-ch{font-family:var(--disp);font-weight:700;font-size:21px;letter-spacing:-.01em}
+  .chart .c-ch .nxt{margin-left:5px;vertical-align:middle}
+  .chart .c-l{color:var(--amber);font-size:15px;letter-spacing:.04em}
+  .chart .c-r{color:var(--teal);font-size:15px;letter-spacing:.04em}
+  .chart .c-f{color:var(--faint);font-size:11px;letter-spacing:.12em}
+  /* nowrap keeps every row the same height; the wrapper scrolls sideways instead */
+  .chart .c-cue{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12.5px;color:var(--faint);
+    font-style:italic;padding-left:4px}
+  .chart .nxt{appearance:none;background:none;border:0;color:var(--faint);cursor:pointer;font-size:13px;padding:0 2px}
+  .chart .nxt:hover{color:var(--teal)}
+
+  /* on a phone the notes are what matter; the lyric cue is still in the card view */
+  @media (max-width:620px){
+    .chart th:last-child,.chart td:last-child{display:none}
+    .chart th,.chart td{padding-left:10px;padding-right:10px}
+  }
+
   .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:12px;color:var(--dim)}
   .legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:baseline}
 </style>
@@ -204,6 +234,13 @@
           <button data-bpm="56">slow</button>
           <button data-bpm="76" class="sel">easy</button>
           <button data-bpm="100">steady</button>
+          <button data-bpm="132">brisk</button>
+          <button data-bpm="168">fast</button>
+        </span>
+        <span class="lbl" style="margin-left:6px">show</span>
+        <span class="qual" id="view">
+          <button data-view="keys" class="sel">keyboard</button>
+          <button data-view="chart">just the notes</button>
         </span>
         <button class="hear play" id="playSong">&#9658; play song</button>
       </div>
@@ -215,6 +252,7 @@
     <div class="legend">
       <span><i style="background:#E6A93C"></i>left hand &mdash; bass, below middle C</span>
       <span><i style="background:#67CBA6"></i>right hand &mdash; the triad, above middle C</span>
+      <span>note names carry their octave: C4 is middle C</span>
       <span>small numbers are fingers: 1 = thumb, 5 = little finger</span>
     </div>
   </section>
@@ -544,57 +582,103 @@ function kbWide(marks){ // marks: Map midi -> colour
 // ---- the songs -----------------------------------------------------------
 // Traditional tunes (all public domain) plus the loops most pop songs are built on.
 const SONGS=[
-  {name:'Twinkle, Twinkle', kind:'traditional', key:'C major', beats:4,
+  // ---------- easy songs (all public domain) ----------
+  {name:'Row Your Boat', kind:'traditional', group:'song', key:'C major', beats:4,
+   tip:'The easiest one here \u2014 almost the whole song is a single chord, so you can spend the time getting both hands landing together.',
+   bars:[['C','Row, row, row your boat'],['C','gent-ly down the stream'],
+         ['C','mer-ri-ly, mer-ri-ly,'],['C','mer-ri-ly, mer-ri-ly,'],
+         ['G','life is but a'],['C','dream']]},
+
+  {name:'Twinkle, Twinkle', kind:'traditional', group:'song', key:'C major', beats:4,
    tip:'Three chords for the whole tune. Play both hands together on beat 1 and let the chord ring for the rest of the bar.',
    bars:[['C','Twin-kle twin-kle'],['C','lit-tle star'],['F','how I won-der'],['C','what you are'],
          ['F','Up a-bove the'],['C','world so high'],['G','like a dia-mond'],['C','in the sky']]},
 
-  {name:'Amazing Grace', kind:'traditional', key:'G major', beats:3,
+  {name:'Ode to Joy', kind:'Beethoven', group:'song', key:'C major', beats:4,
+   tip:'Only two chords the whole way through. The cues are the melody notes \u2014 play them with your right hand once the chords feel easy.',
+   bars:[['C','\u266a E E F G'],['G','\u266a G F E D'],['C','\u266a C C D E'],['G','\u266a E D D'],
+         ['C','\u266a E E F G'],['G','\u266a G F E D'],['C','\u266a C C D E'],['C','\u266a D C C']]},
+
+  {name:'When the Saints', kind:'traditional', group:'song', key:'C major', beats:4,
+   tip:'Bright and marching. Sit on C for four bars, then the F in bar 5 is the lift everyone waits for.',
+   bars:[['C','Oh, when the saints'],['C','go march-ing in'],['C','oh, when the saints go'],['C','march-ing in'],
+         ['F','Oh Lord, I want to be'],['C','in that num-ber'],['G','when the saints go'],['C','march-ing in']]},
+
+  {name:'Amazing Grace', kind:'traditional', group:'song', key:'G major', beats:3,
    tip:'Three beats to a bar, so count 1-2-3. A gentle one: the left hand can play on beat 1 only.',
    bars:[['G','A-ma-zing'],['G','grace, how'],['C','sweet the'],['G','sound'],
          ['G','that saved a'],['G','wretch like'],['D','me'],['D',''],
          ['G','I once was'],['G','lost, but'],['C','now am'],['G','found'],
          ['G','was blind but'],['D','now I'],['G','see'],['G','']]},
 
-  {name:'House of the Rising Sun', kind:'traditional', key:'A minor', beats:4,
-   tip:'A minor-key folk classic. Four bars up, four bars back — repeat the whole thing as many times as you like.',
-   bars:[['Am','There is a'],['C','house in'],['D','New Or-'],['F','leans'],
-         ['Am','they call the'],['C','Ri-sing'],['E','Sun'],['E','']]},
-
-  {name:'Auld Lang Syne', kind:'traditional', key:'G major', beats:4,
+  {name:'Auld Lang Syne', kind:'traditional', group:'song', key:'G major', beats:4,
    tip:'The New Year tune. Only four different chords, and the hands barely move between them.',
    bars:[['G','Should auld ac-'],['C','quain-tance be for-'],['G','got'],['D','and'],
          ['G','ne-ver brought to'],['C','mind, should auld ac-'],['D','quain-tance be for-'],['G','got']]},
 
-  {name:'Pop loop', kind:'I - V - vi - IV', key:'C major', beats:4,
+  {name:'House of the Rising Sun', kind:'traditional', group:'song', key:'A minor', beats:4,
+   tip:'A minor-key folk classic. Four bars up, four bars back \u2014 repeat the whole thing as many times as you like.',
+   bars:[['Am','There is a'],['C','house in'],['D','New Or-'],['F','leans'],
+         ['Am','they call the'],['C','Ri-sing'],['E','Sun'],['E','']]},
+
+  // ---------- progressions to loop ----------
+  {name:'Sunshine', kind:'I - IV - V', group:'loop', key:'C major', beats:4,
+   tip:'The three happiest chords in music. Folk, country and early rock nearly all live here \u2014 loop it and it just sounds glad.',
+   bars:[['C',''],['F',''],['G',''],['C','']]},
+
+  {name:'Campfire', kind:'I - IV - I - V', group:'loop', key:'C major', beats:4,
+   tip:'Bounces home to C between every change, which makes it the easiest loop to sing anything over.',
+   bars:[['C',''],['F',''],['C',''],['G','']]},
+
+  {name:'Anthem', kind:'I - V - IV', group:'loop', key:'C major', beats:4,
+   tip:'Big and wide open \u2014 the stadium-chorus shape. Try it with the octave bass and the steady tempo.',
+   bars:[['C',''],['G',''],['F',''],['F','']]},
+
+  {name:'Bright lift', kind:'I - iii - IV - V', group:'loop', key:'C major', beats:4,
+   tip:'Every chord is a step up from the one before, so it feels like it keeps climbing without ever arriving.',
+   bars:[['C',''],['Em',''],['F',''],['G','']]},
+
+  {name:'Pop loop', kind:'I - V - vi - IV', group:'loop', key:'C major', beats:4,
    tip:'The four chords behind an enormous number of pop songs. Loop it and sing anything over the top.',
    bars:[['C',''],['G',''],['Am',''],['F','']]},
 
-  {name:'Doo-wop', kind:'I - vi - IV - V', key:'C major', beats:4,
-   tip:'The 1950s ballad loop. Sweet and slow — try the slow tempo.',
+  {name:'Warm turnaround', kind:'I - vi - ii - V', group:'loop', key:'C major', beats:4,
+   tip:'The soul and jazz standard. Every chord leans into the next one and it lands back on C, so it loops forever.',
+   bars:[['C',''],['Am',''],['Dm',''],['G','']]},
+
+  {name:'Doo-wop', kind:'I - vi - IV - V', group:'loop', key:'C major', beats:4,
+   tip:'The 1950s ballad loop. Sweet and slow \u2014 try the slow tempo.',
    bars:[['C',''],['Am',''],['F',''],['G','']]},
 
-  {name:'12-bar blues', kind:'blues in C', key:'C major', beats:4,
+  {name:'12-bar blues', kind:'blues in C', group:'loop', key:'C major', beats:4,
    tip:'The backbone of blues and early rock. Three chords, twelve bars, round and round.',
    bars:[['C',''],['C',''],['C',''],['C',''],['F',''],['F',''],
          ['C',''],['C',''],['G',''],['F',''],['C',''],['G','turnaround']]},
 
-  {name:'Canon', kind:'Pachelbel, simplified', key:'C major', beats:4,
-   tip:'Pachelbel’s descending bass line. The left hand walks down step by step — listen for it.',
+  {name:'Canon', kind:'Pachelbel, simplified', group:'loop', key:'C major', beats:4,
+   tip:'Pachelbel\u2019s descending bass line. The left hand walks down step by step \u2014 listen for it.',
    bars:[['C',''],['G',''],['Am',''],['Em',''],['F',''],['C',''],['F',''],['G','']]},
 ];
 
 // ---- render + play -------------------------------------------------------
-let songIdx=0, bpm=76, steps=[], songBus=null, songTimers=[];
+let songIdx=0, bpm=76, steps=[], songBus=null, songTimers=[], viewMode='keys'; // keys | chart
 
 function buildSteps(){
   const song=SONGS[songIdx];
-  let prev=null;
-  steps=song.bars.map(([sym,cue])=>{
-    const c=parseChord(sym);
-    const rh=rhVoicing(c.root,c.q,prev); prev=rh;
-    return {...c,cue,rh,lh:lhVoicing(c.root),beats:song.beats};
-  });
+  const voice=seed=>{
+    let prev=seed;
+    return song.bars.map(([sym,cue])=>{
+      const c=parseChord(sym);
+      const rh=rhVoicing(c.root,c.q,prev); prev=rh;
+      return {...c,cue,rh,lh:lhVoicing(c.root),beats:song.beats};
+    });
+  };
+  let out=voice(null);
+  // A loop comes round again, so voice it a second time seeded from its own last
+  // chord. That makes the join from the final bar back to bar 1 as smooth as
+  // every other change, instead of a jump you can hear on every repeat.
+  if(song.group==='loop') out=voice(out[out.length-1].rh);
+  steps=out;
 }
 
 function renderSong(){
@@ -603,16 +687,33 @@ function renderSong(){
   document.getElementById('songMeta').innerHTML=
     `<b>${song.name}</b> &middot; ${song.key} &middot; ${song.beats} beats a bar &middot; ${song.bars.length} bars`;
   document.getElementById('songTip').textContent=song.tip;
+  const box=document.getElementById('bars');
+  box.className = viewMode==='chart' ? 'chartwrap' : 'bars';
+  box.innerHTML='';
+  (viewMode==='chart'?renderChart:renderCards)(box);
+}
 
-  const box=document.getElementById('bars'); box.innerHTML='';
+// wire a step element up to hear-on-click and the "what comes next" hand-off
+function bindStep(el,s,i){
+  el.dataset.i=i; el.classList.add('step'); el.tabIndex=0;
+  el.setAttribute('role','button');
+  el.setAttribute('aria-label',`bar ${i+1}, ${s.sym}, hear it`);
+  const nxt=el.querySelector('.nxt');
+  if(nxt) nxt.onclick=e=>{e.stopPropagation();setChord(s.root,s.q,null,false);
+    document.querySelector('.now').scrollIntoView({behavior:'smooth',block:'center'});};
+  const hit=()=>{stopSong();playNotes(s.lh.concat(s.rh),audio().currentTime,1.6,0.45);flash(i);};
+  el.onclick=hit;
+  el.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();hit();} };
+}
+
+// full cards, with the keyboard picture
+function renderCards(box){
   steps.forEach((s,i)=>{
     const marks=new Map();
     s.lh.forEach(m=>marks.set(m,'#E6A93C'));
     s.rh.forEach(m=>marks.set(m,'#67CBA6'));
     const el=document.createElement('div');
-    el.className='bar'; el.dataset.i=i; el.tabIndex=0;
-    el.setAttribute('role','button');
-    el.setAttribute('aria-label',`bar ${i+1}, ${s.sym}, hear it`);
+    el.className='bar';
     el.innerHTML=`
       <div class="top">
         <span class="no">BAR ${i+1}</span>
@@ -629,21 +730,44 @@ function renderSong(){
           <span class="f">${rhFingers(s.rh,s.root)}</span></div>
       </div>
       ${kbWide(marks)}`;
-    el.querySelector('.nxt').onclick=e=>{e.stopPropagation();setChord(s.root,s.q,null,false);
-      document.querySelector('.now').scrollIntoView({behavior:'smooth',block:'center'});};
-    const hit=()=>{stopSong();playNotes(s.lh.concat(s.rh),audio().currentTime,1.6,0.45);flash(i);};
-    el.onclick=hit;
-    el.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();hit();} };
+    bindStep(el,s,i);
     box.appendChild(el);
   });
+}
+
+// text only: everything written down, nothing to decode from a picture
+function renderChart(box){
+  const t=document.createElement('table'); t.className='chart';
+  t.innerHTML=`<thead><tr><th>Bar</th><th>Chord</th><th>Left hand</th><th>Right hand</th><th></th></tr></thead>`;
+  const body=document.createElement('tbody');
+  steps.forEach((s,i)=>{
+    const tr=document.createElement('tr');
+    tr.className='bar-row';
+    tr.innerHTML=`
+      <td class="c-no">${i+1}</td>
+      <td class="c-ch">${s.sym}<button class="nxt" title="Show chords that could come next" aria-label="use ${s.sym} as the current chord">&#8599;</button></td>
+      <td><span class="c-l">${s.lh.map(noteName).join(' ')}</span><br><span class="c-f">${lhFingers()}</span></td>
+      <td><span class="c-r">${s.rh.map(noteName).join(' ')}</span><br><span class="c-f">${rhFingers(s.rh,s.root)}</span></td>
+      <td class="c-cue">${s.cue||''}</td>`;
+    bindStep(tr,s,i);
+    body.appendChild(tr);
+  });
+  t.appendChild(body); box.appendChild(t);
 }
 
 function flash(i){
   highlight(i);
   songTimers.push(setTimeout(()=>highlight(-1),700));
 }
-function highlight(i){
-  document.querySelectorAll('.bar').forEach(b=>b.classList.toggle('on',+b.dataset.i===i));
+let lastBar=-1;
+function highlight(i,follow){
+  lastBar=i;
+  document.querySelectorAll('.step').forEach(b=>{
+    const on=+b.dataset.i===i;
+    b.classList.toggle('on',on);
+    // while the song plays, keep the current bar on screen so you can read ahead
+    if(on&&follow) b.scrollIntoView({block:'nearest',behavior:'smooth'});
+  });
 }
 function setPlayBtn(on){
   const b=document.getElementById('playSong');
@@ -665,7 +789,7 @@ function playSong(){
     const dur=s.beats*spb;
     playNotes(s.lh,t,dur*0.96,0.42,songBus);
     playNotes(s.rh,t,dur*0.96,0.34,songBus);
-    songTimers.push(setTimeout(()=>highlight(i),elapsed*1000));
+    songTimers.push(setTimeout(()=>highlight(i,true),elapsed*1000));
     t+=dur; elapsed+=dur;
   });
   songTimers.push(setTimeout(stopSong,elapsed*1000+400));
@@ -675,16 +799,32 @@ function playSong(){
 // ---- controls
 (function(){
   const pick=document.getElementById('songPick');
-  SONGS.forEach((s,i)=>{
-    const b=document.createElement('button');
-    b.className='song'+(i===0?' sel':'');
-    b.innerHTML=`${s.name}<span class="kind">${s.kind}</span>`;
+  [['song','Songs'],['loop','Progressions to loop']].forEach(([g,label])=>{
+    const row=document.createElement('div'); row.className='pickgroup';
+    row.innerHTML=`<span class="glbl">${label}</span>`;
+    SONGS.forEach((s,i)=>{
+      if(s.group!==g) return;
+      const b=document.createElement('button');
+      b.className='song'+(i===0?' sel':''); b.dataset.i=i;
+      b.innerHTML=`${s.name}<span class="kind">${s.kind}</span>`;
+      b.onclick=()=>{
+        stopSong(); songIdx=i;
+        document.querySelectorAll('.song').forEach(x=>x.classList.toggle('sel',+x.dataset.i===i));
+        renderSong();
+      };
+      row.appendChild(b);
+    });
+    pick.appendChild(row);
+  });
+  document.querySelectorAll('#view button').forEach(b=>{
     b.onclick=()=>{
-      stopSong(); songIdx=i;
-      [...pick.children].forEach((x,j)=>x.classList.toggle('sel',j===i));
+      viewMode=b.dataset.view;
+      document.querySelectorAll('#view button').forEach(x=>x.classList.toggle('sel',x===b));
+      const playing=!!songBus;
       renderSong();
+      // a re-render drops the highlight, so put it back if a song is mid-play
+      if(playing) highlight(lastBar);
     };
-    pick.appendChild(b);
   });
   document.querySelectorAll('#lh button').forEach(b=>{
     b.onclick=()=>{
