@@ -134,6 +134,19 @@
   .hand .f{color:var(--faint)}
   svg.kbwide{display:block;width:100%;height:auto;max-width:392px}
 
+  .words{display:none;margin:12px 0 2px}
+  .words.open{display:block}
+  .words textarea{width:100%;min-height:130px;background:var(--panel);color:var(--ink);
+    border:.5px solid var(--line);border-radius:12px;padding:12px 14px;
+    font-family:ui-sans-serif,system-ui,sans-serif;font-size:13.5px;line-height:1.65;resize:vertical}
+  .words textarea:focus{outline:none;border-color:var(--amber)}
+  .words textarea::placeholder{color:var(--faint)}
+  .whint{font-size:11.5px;color:var(--faint);margin-top:6px}
+  #wordsBtn.on{border-color:var(--amber);color:var(--amber)}
+  .wordblock{white-space:pre-wrap;font-size:14px;line-height:1.75;color:var(--dim);
+    background:var(--panel);border:.5px solid var(--line);border-radius:14px;
+    padding:15px 17px;margin-top:14px}
+
   .pickgroup{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
   .pickgroup .glbl{width:100%;font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
 
@@ -242,11 +255,20 @@
           <button data-view="keys" class="sel">keyboard</button>
           <button data-view="chart">just the notes</button>
         </span>
+        <button class="hear" id="wordsBtn" aria-expanded="false">&#9998; words</button>
         <button class="hear play" id="playSong">&#9658; play song</button>
       </div>
     </div>
 
+    <div class="words" id="words">
+      <textarea id="wordsBox" spellcheck="false"
+        aria-label="Your own words for this song"
+        placeholder="Paste the words for this song.&#10;&#10;One line per bar and each line lands on its bar. Any other number of lines and it just sits under the music."></textarea>
+      <div class="whint" id="wordsHint"></div>
+    </div>
+
     <div class="tip" id="songTip"></div>
+    <div class="wordblock" id="wordBlock" hidden></div>
     <div class="bars" id="bars"></div>
 
     <div class="legend">
@@ -803,9 +825,19 @@ function buildSteps(){
   steps=out;
 }
 
+// Your own words for a song, kept in this browser and nowhere else. They are
+// never part of the page's source, so nothing you type here is published.
+const wordsKey=name=>'nextchord.words.'+name;
+function loadWords(name){ try{ return localStorage.getItem(wordsKey(name))||''; }catch(e){ return ''; } }
+function saveWords(name,v){
+  try{ v.trim() ? localStorage.setItem(wordsKey(name),v) : localStorage.removeItem(wordsKey(name)); }
+  catch(e){ /* private window, or storage blocked: the words just will not stick */ }
+}
+
 function renderSong(){
   const song=SONGS[songIdx];
   buildSteps();
+  applyWords(song);
   document.getElementById('songMeta').innerHTML=
     `<b>${song.name}</b> &middot; ${song.key} &middot; ${song.beats} beats a bar &middot; ${song.bars.length} bars`;
   document.getElementById('songTip').textContent=song.tip;
@@ -813,6 +845,23 @@ function renderSong(){
   box.className = viewMode==='chart' ? 'chartwrap' : 'bars';
   box.innerHTML='';
   (viewMode==='chart'?renderChart:renderCards)(box);
+}
+
+// One line per bar and each line rides along with its bar; any other number of
+// lines and there is no sane mapping, so it goes under the music as a block.
+function applyWords(song){
+  const raw=loadWords(song.name);
+  const lines=raw.split('\n').map(x=>x.trim()).filter(Boolean);
+  const block=document.getElementById('wordBlock'), hint=document.getElementById('wordsHint');
+  const perBar=lines.length===steps.length && lines.length>0;
+  if(perBar) steps.forEach((s,i)=>s.cue=lines[i]);
+  block.hidden=!(raw.trim() && !perBar);
+  block.textContent=block.hidden?'':raw.trim();
+  hint.textContent = !raw.trim()
+    ? `${song.bars.length} bars in this song. Saved in this browser only \u2014 never uploaded, never part of the page.`
+    : perBar
+      ? `\u2713 ${lines.length} lines for ${steps.length} bars \u2014 each line is showing on its own bar.`
+      : `${lines.length} lines for ${steps.length} bars, so it is showing as a block under the music. Match the counts to put a line on each bar.`;
 }
 
 // wire a step element up to hear-on-click and the "what comes next" hand-off
@@ -932,12 +981,25 @@ function playSong(){
       b.onclick=()=>{
         stopSong(); songIdx=i;
         document.querySelectorAll('.song').forEach(x=>x.classList.toggle('sel',+x.dataset.i===i));
+        document.getElementById('wordsBox').value=loadWords(s.name);
         renderSong();
       };
       row.appendChild(b);
     });
     pick.appendChild(row);
   });
+  const wBtn=document.getElementById('wordsBtn'), wPane=document.getElementById('words'),
+        wBox=document.getElementById('wordsBox');
+  wBtn.onclick=()=>{
+    const open=!wPane.classList.contains('open');
+    wPane.classList.toggle('open',open); wBtn.classList.toggle('on',open);
+    wBtn.setAttribute('aria-expanded',String(open));
+    if(open){ wBox.value=loadWords(SONGS[songIdx].name); wBox.focus(); }
+  };
+  wBox.oninput=()=>saveWords(SONGS[songIdx].name,wBox.value);
+  // re-render on blur rather than on every keystroke, which would steal focus
+  wBox.onblur=()=>renderSong();
+
   document.querySelectorAll('#view button').forEach(b=>{
     b.onclick=()=>{
       viewMode=b.dataset.view;
